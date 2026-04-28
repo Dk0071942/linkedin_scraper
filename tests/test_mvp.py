@@ -13,7 +13,7 @@ from mvp.models import Application, ApplicationStatus, JobRecord
 from mvp.pipeline import SearchSpec, run_pipeline
 from mvp.search import MAX_SEARCH_LIMIT, PaginatedJobSearch
 from mvp.storage import JobStore
-from mvp.web import config_io
+from mvp.web import config_io, geocode
 
 
 class MultiDictStub(dict):
@@ -356,3 +356,27 @@ async def test_paginated_search_clamps_to_linkedin_depth_cap(monkeypatch):
 
     assert len(result) == MAX_SEARCH_LIMIT
     assert len(page.goto_urls) == MAX_SEARCH_LIMIT // 25
+
+
+@pytest.mark.unit
+async def test_geocode_areas_uses_dedicated_disk_cache(monkeypatch, tmp_path: Path):
+    calls = []
+
+    def fake_geocode(location: str, *, include_area: bool = False):
+        calls.append((location, include_area))
+        return {
+            "lat": 52.52,
+            "lon": 13.405,
+            "display_name": location,
+            "geojson": {"type": "Point", "coordinates": [13.405, 52.52]},
+        }
+
+    monkeypatch.setattr("mvp.web.geocode._geocode_sync", fake_geocode)
+
+    first = await geocode.geocode_areas(["Berlin"], tmp_path)
+    second = await geocode.geocode_areas(["Berlin"], tmp_path)
+
+    assert first == second
+    assert first["Berlin"]["geojson"]["type"] == "Point"
+    assert calls == [("Berlin", True)]
+    assert (tmp_path / "geocode_area_cache.json").exists()

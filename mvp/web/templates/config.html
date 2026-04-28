@@ -60,6 +60,23 @@
     </div>
   </section>
 
+  <!-- Search areas map -->
+  <section class="rounded-lg border border-slate-200 bg-white p-6">
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="text-base font-semibold">{{ t("config.search_map.heading") }}</h2>
+      <span id="search-map-status" class="text-xs text-slate-500"></span>
+    </div>
+    <p class="text-sm text-slate-600 mb-3">{{ t("config.search_map.help") }}</p>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <div id="search-map" class="rounded-md border border-slate-200" style="height: 360px;"></div>
+    <div id="search-map-legend" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600"></div>
+  </section>
+
   <!-- Filters -->
   <section class="rounded-lg border border-slate-200 bg-white p-6 space-y-6">
     <div>
@@ -171,11 +188,214 @@
   </div>
 </template>
 
+<script id="search-map-strings" type="application/json">{{ {
+  "loading": t("common.loading"),
+  "not_found": t("config.search_map.not_found")
+} | tojson }}</script>
 <script>
 function addSearchRow() {
   const tpl = document.getElementById("search-row-template");
   const node = tpl.content.cloneNode(true);
   document.getElementById("searches").appendChild(node);
 }
+
+(function () {
+  const STR = JSON.parse(document.getElementById("search-map-strings").textContent);
+  const COLORS = ["#0ea5e9", "#10b981", "#f97316", "#a855f7", "#e11d48", "#eab308", "#14b8a6", "#ec4899"];
+  const cache = new Map();              // location string (lowercased) -> nominatim result | null
+  const layers = new WeakMap();         // row element -> Leaflet layer
+  const colorOf = new WeakMap();        // row element -> color string
+  const seq = new WeakMap();            // row element -> request sequence (for race-safety)
+  const debounceTimers = new WeakMap(); // input element -> timeout id
+  const labelOf = new WeakMap();        // row element -> location string
+
+  let map = null;
+  let nextColorIndex = 0;
+  let geocodeQueue = Promise.resolve();
+  let pendingGeocodes = 0;
+
+  function getColor(row) {
+    let c = colorOf.get(row);
+    if (!c) {
+      c = COLORS[nextColorIndex % COLORS.length];
+      nextColorIndex++;
+      colorOf.set(row, c);
+    }
+    return c;
+  }
+
+  function initMap() {
+    map = L.map("search-map", { worldCopyJump: true }).setView([20, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+  }
+
+  function setStatus(text) {
+    document.getElementById("search-map-status").textContent = text;
+  }
+
+  async function geocode(loc) {
+    const key = loc.trim().toLowerCase();
+    if (cache.has(key)) return cache.get(key);
+
+    pendingGeocodes += 1;
+    setStatus(STR.loading);
+    const task = geocodeQueue.then(async () => {
+      const url = "/config/search-locations?location=" + encodeURIComponent(loc);
+      const r = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!r.ok) {
+        cache.set(key, null);
+        return null;
+      }
+      const data = await r.json();
+      const item = (data.locations || []).find(x => x.query === loc);
+      const result = item ? item.result : null;
+      cache.set(key, result);
+      return result;
+    });
+    geocodeQueue = task.catch(() => null);
+
+    try {
+      return await task;
+    } catch (e) {
+      cache.set(key, null);
+      return null;
+    } finally {
+      pendingGeocodes -= 1;
+      if (pendingGeocodes <= 0) setStatus("");
+    }
+  }
+
+  function clearLayer(row) {
+    const prev = layers.get(row);
+    if (prev) {
+      map.removeLayer(prev);
+      layers.delete(row);
+    }
+  }
+
+  async function updateRow(input) {
+    const row = input.closest(".search-row");
+    if (!row) return;
+    const value = input.value.trim();
+    labelOf.set(row, value);
+
+    const myToken = (seq.get(row) || 0) + 1;
+    seq.set(row, myToken);
+
+    clearLayer(row);
+
+    if (!value) {
+      renderLegend();
+      fitAll();
+      return;
+    }
+
+    const result = await geocode(value);
+    if (seq.get(row) !== myToken) return; // a newer keystroke has superseded us
+    if (!row.isConnected || !document.getElementById("searches").contains(row)) return;
+
+    if (!result) {
+      renderLegend();
+      fitAll();
+      return;
+    }
+
+    const color = getColor(row);
+    let layer;
+    if (result.geojson) {
+      layer = L.geoJSON(result.geojson, {
+        style: { color, weight: 2, fillColor: color, fillOpacity: 0.18 }
+      });
+    } else {
+      const lat = parseFloat(result.lat), lon = parseFloat(result.lon);
+      layer = L.circleMarker([lat, lon], {
+        radius: 8, color, fillColor: color, fillOpacity: 0.5, weight: 2
+      });
+    }
+    layer.bindTooltip(value);
+    layer.addTo(map);
+    layers.set(row, layer);
+    renderLegend();
+    fitAll();
+  }
+
+  function fitAll() {
+    const rows = document.querySelectorAll("#searches .search-row");
+    let bounds = null;
+    rows.forEach(row => {
+      const l = layers.get(row);
+      if (!l) return;
+      const b = l.getBounds ? l.getBounds() : L.latLngBounds([l.getLatLng()]);
+      bounds = bounds ? bounds.extend(b) : b;
+    });
+    if (bounds && bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+  }
+
+  function renderLegend() {
+    const el = document.getElementById("search-map-legend");
+    const rows = document.querySelectorAll("#searches .search-row");
+    const items = [];
+    rows.forEach(row => {
+      const label = labelOf.get(row);
+      if (!label) return;
+      const has = layers.has(row);
+      const color = has ? getColor(row) : "#94a3b8";
+      const suffix = has ? "" : ` (${STR.not_found})`;
+      items.push(
+        '<span class="inline-flex items-center gap-1.5">'
+        + '<span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:'
+        + color + '"></span>'
+        + escapeHtml(label) + escapeHtml(suffix)
+        + '</span>'
+      );
+    });
+    el.innerHTML = items.join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  function scheduleUpdate(input) {
+    clearTimeout(debounceTimers.get(input));
+    debounceTimers.set(input, setTimeout(() => updateRow(input), 600));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initMap();
+
+    // Live updates via event delegation, so dynamically added rows work too.
+    document.getElementById("searches").addEventListener("input", (e) => {
+      if (e.target.matches('input[name="search_location"]')) {
+        scheduleUpdate(e.target);
+      }
+    });
+
+    // Clean up layers when a row is removed (× button).
+    new MutationObserver(muts => {
+      let dirty = false;
+      for (const m of muts) {
+        for (const node of m.removedNodes) {
+          if (node.nodeType === 1 && node.classList && node.classList.contains("search-row")) {
+            const layer = layers.get(node);
+            if (layer) { map.removeLayer(layer); layers.delete(node); }
+            dirty = true;
+          }
+        }
+      }
+      if (dirty) { renderLegend(); fitAll(); }
+    }).observe(document.getElementById("searches"), { childList: true });
+
+    // Render any pre-filled rows on first load.
+    document.querySelectorAll('#searches input[name="search_location"]').forEach(inp => {
+      if (inp.value.trim()) updateRow(inp);
+    });
+  });
+})();
 </script>
 {% endblock %}

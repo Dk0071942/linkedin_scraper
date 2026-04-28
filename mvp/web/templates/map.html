@@ -34,6 +34,7 @@
 <script id="map-strings" type="application/json">{{ {
   "kept": t("map.layer.kept"),
   "discarded_layer": t("map.layer.discarded"),
+  "search_areas": t("map.layer.search_areas"),
   "discarded_popup": t("map.popup.discarded"),
   "untitled": t("common.untitled"),
   "failed": t("map.failed")
@@ -48,7 +49,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 const keptCluster = L.markerClusterGroup();
 const discardedCluster = L.markerClusterGroup();
+const searchAreas = L.layerGroup();
 map.addLayer(keptCluster);  // discarded layer is off by default
+map.addLayer(searchAreas);
+
+const AREA_COLORS = ["#0ea5e9", "#10b981", "#f97316", "#a855f7", "#e11d48", "#eab308", "#14b8a6", "#ec4899"];
 
 function colorFor(job) {
   if (job.discarded) return '#e11d48';
@@ -75,9 +80,38 @@ function escapeHtml(s) {
   }[c]));
 }
 
-fetch('/map/data')
-  .then(r => r.json())
-  .then(d => {
+function renderSearchAreas(areas) {
+  let count = 0;
+  const fitBounds = [];
+  areas.forEach((a, i) => {
+    const r = a.result;
+    if (!r) return;
+    const color = AREA_COLORS[i % AREA_COLORS.length];
+    let layer;
+    if (r.geojson) {
+      layer = L.geoJSON(r.geojson, {
+        style: { color, weight: 2, fillColor: color, fillOpacity: 0.12 },
+        interactive: false,
+      });
+    } else {
+      layer = L.circleMarker([r.lat, r.lon], {
+        radius: 8, color, fillColor: color, fillOpacity: 0.4, weight: 2,
+        interactive: false,
+      });
+    }
+    layer.bindTooltip(a.query, { sticky: true });
+    layer.addTo(searchAreas);
+    const b = layer.getBounds ? layer.getBounds() : L.latLngBounds([layer.getLatLng()]);
+    if (b && b.isValid()) fitBounds.push(b);
+    count++;
+  });
+  return { count, bounds: fitBounds };
+}
+
+Promise.all([
+  fetch('/map/data').then(r => r.json()),
+  fetch('/map/search-areas').then(r => r.json()).catch(() => ({ areas: [] })),
+]).then(([d, a]) => {
     const bounds = [];
     for (const j of d.jobs) {
       const opacity = j.discarded ? 0.7 : 1;
@@ -96,11 +130,20 @@ fetch('/map/data')
       (j.discarded ? discardedCluster : keptCluster).addLayer(m);
       if (!j.discarded) bounds.push([j.lat, j.lon]);
     }
-    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
+
+    const areaInfo = renderSearchAreas(a.areas || []);
+
+    let combined = null;
+    if (bounds.length) combined = L.latLngBounds(bounds);
+    for (const b of areaInfo.bounds) {
+      combined = combined ? combined.extend(b) : b;
+    }
+    if (combined && combined.isValid()) map.fitBounds(combined, { padding: [40, 40] });
 
     L.control.layers(null, {
       [`${strings.kept} (${d.kept.mapped})`]: keptCluster,
       [`${strings.discarded_layer} (${d.discarded.mapped})`]: discardedCluster,
+      [`${strings.search_areas} (${areaInfo.count})`]: searchAreas,
     }, { collapsed: false }).addTo(map);
 
     const k = d.kept, x = d.discarded;

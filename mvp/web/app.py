@@ -23,7 +23,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
@@ -250,6 +250,31 @@ async def map_data():
     })
 
 
+@app.get("/map/search-areas")
+async def map_search_areas():
+    """Return geocoded polygons for every distinct location in saved searches."""
+    cfg = config_io.load_raw()
+    searches = cfg.get("searches") or []
+    locations: list[str] = []
+    seen: set[str] = set()
+    for s in searches:
+        loc = (s.get("location") or "").strip() if isinstance(s, dict) else ""
+        if loc and loc not in seen:
+            locations.append(loc)
+            seen.add(loc)
+    if not locations:
+        return JSONResponse({"areas": []})
+
+    data_dir = jobs_io.store().data_dir
+    resolved = await geocode.geocode_areas(locations, data_dir)
+    return JSONResponse({
+        "areas": [
+            {"query": loc, "result": resolved.get(loc)}
+            for loc in locations
+        ],
+    })
+
+
 # --- Config ---
 
 @app.get("/config", response_class=HTMLResponse)
@@ -273,6 +298,28 @@ async def save_config(request: Request):
     except Exception as e:
         return RedirectResponse(f"/config?error={e}", status_code=303)
     return RedirectResponse("/config?saved=true", status_code=303)
+
+
+@app.get("/config/search-locations")
+async def config_search_locations(
+    location: Optional[list[str]] = Query(default=None),
+):
+    """Geocode search locations for the config-page preview map."""
+    locations = [loc.strip() for loc in (location or []) if loc and loc.strip()]
+    if not locations:
+        return JSONResponse({"locations": []})
+
+    data_dir = jobs_io.store().data_dir
+    resolved = await geocode.geocode_areas(locations, data_dir)
+    return JSONResponse({
+        "locations": [
+            {
+                "query": loc,
+                "result": resolved.get(loc),
+            }
+            for loc in locations
+        ],
+    })
 
 
 # --- Run ---

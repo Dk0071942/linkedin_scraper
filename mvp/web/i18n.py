@@ -123,6 +123,12 @@ _EN: dict[str, str] = {
         "paginates LinkedIn results (~25 per page) until this many unique "
         "URLs are found or the results run out. Max: 1000."
     ),
+    "config.search_map.heading": "Search areas on map",
+    "config.search_map.help": (
+        "Each search location above is outlined on the map as you type. "
+        "Geocoding via OpenStreetMap Nominatim."
+    ),
+    "config.search_map.not_found": "not found",
     "config.filters.heading": "Filters",
     "config.filters.help": (
         "One keyword per line. Across fields = AND. Within a field, "
@@ -178,6 +184,7 @@ _EN: dict[str, str] = {
     ),
     "map.layer.kept": "Kept",
     "map.layer.discarded": "Discarded",
+    "map.layer.search_areas": "Search areas",
     "map.failed": "Failed to load map data",
     "map.popup.discarded": "(discarded)",
 }
@@ -284,6 +291,12 @@ _ZH: dict[str, str] = {
         "本次搜索最多收集的新职位 URL 数。抓取器会自动翻页 LinkedIn 搜索结果"
         "(每页约 25 条),直到收集到这么多唯一 URL 或结果耗尽。上限:1000。"
     ),
+    "config.search_map.heading": "搜索范围地图",
+    "config.search_map.help": (
+        "在上方输入地点时,会在地图上勾勒出对应区域。"
+        "地理编码使用 OpenStreetMap Nominatim。"
+    ),
+    "config.search_map.not_found": "未找到",
     "config.filters.heading": "过滤条件",
     "config.filters.help": (
         "每行一个关键词。跨字段为 AND。同一字段内,include 为 OR。"
@@ -339,6 +352,7 @@ _ZH: dict[str, str] = {
     ),
     "map.layer.kept": "保留",
     "map.layer.discarded": "已丢弃",
+    "map.layer.search_areas": "搜索范围",
     "map.failed": "加载地图数据失败",
     "map.popup.discarded": "(已丢弃)",
 }
