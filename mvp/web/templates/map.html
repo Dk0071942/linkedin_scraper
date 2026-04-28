@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Map · LinkedIn Scraper{% endblock %}
+{% block title %}{{ t("map.heading") }} · {{ t("brand") }}{% endblock %}
 {% block content %}
 <div class="flex items-baseline justify-between mb-4">
-  <h1 class="text-2xl font-semibold tracking-tight">Job locations</h1>
-  <div class="text-sm text-slate-500" id="map-counts">loading…</div>
+  <h1 class="text-2xl font-semibold tracking-tight">{{ t("map.heading") }}</h1>
+  <div class="text-sm text-slate-500" id="map-counts">{{ t("common.loading") }}</div>
 </div>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -18,21 +18,28 @@
 
 <div class="mt-3 flex items-center gap-4 text-xs text-slate-500 flex-wrap">
   <span class="inline-flex items-center gap-1.5">
-    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#475569"></span>Kept · On-site
+    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#475569"></span>{{ t("map.legend.kept_onsite") }}
   </span>
   <span class="inline-flex items-center gap-1.5">
-    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>Kept · Hybrid
+    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>{{ t("map.legend.kept_hybrid") }}
   </span>
   <span class="inline-flex items-center gap-1.5">
-    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#e11d48"></span>Discarded
+    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#e11d48"></span>{{ t("map.legend.discarded") }}
   </span>
   <span class="ml-auto">
-    Geocoding via OpenStreetMap Nominatim · Remote-only jobs hidden ·
-    Toggle layers via the control on the top right of the map.
+    {{ t("map.note") }}
   </span>
 </div>
 
+<script id="map-strings" type="application/json">{{ {
+  "kept": t("map.layer.kept"),
+  "discarded_layer": t("map.layer.discarded"),
+  "discarded_popup": t("map.popup.discarded"),
+  "untitled": t("common.untitled"),
+  "failed": t("map.failed")
+} | tojson }}</script>
 <script>
+const strings = JSON.parse(document.getElementById('map-strings').textContent);
 const map = L.map('map').setView([54, 10], 4);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -78,8 +85,8 @@ fetch('/map/data')
       m.bindPopup(`
         <div style="min-width:200px">
           <div style="font-weight:600">
-            <a href="/jobs/${encodeURIComponent(j.job_id)}">${escapeHtml(j.job_title) || '(untitled)'}</a>
-            ${j.discarded ? ' <span style="color:#e11d48;font-size:11px;font-weight:500">(discarded)</span>' : ''}
+            <a href="/jobs/${encodeURIComponent(j.job_id)}">${escapeHtml(j.job_title) || strings.untitled}</a>
+            ${j.discarded ? ' <span style="color:#e11d48;font-size:11px;font-weight:500">' + escapeHtml(strings.discarded_popup) + '</span>' : ''}
           </div>
           <div style="color:#64748b">${escapeHtml(j.company)}</div>
           <div style="color:#64748b;font-size:12px">${escapeHtml(j.location)}</div>
@@ -92,17 +99,17 @@ fetch('/map/data')
     if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
 
     L.control.layers(null, {
-      [`Kept (${d.kept.mapped})`]: keptCluster,
-      [`Discarded (${d.discarded.mapped})`]: discardedCluster,
+      [`${strings.kept} (${d.kept.mapped})`]: keptCluster,
+      [`${strings.discarded_layer} (${d.discarded.mapped})`]: discardedCluster,
     }, { collapsed: false }).addTo(map);
 
     const k = d.kept, x = d.discarded;
     document.getElementById('map-counts').textContent =
-      `kept: ${k.mapped} mapped, ${k.unmapped} unmapped, ${k.remote} remote · ` +
-      `discarded: ${x.mapped} mapped, ${x.unmapped} unmapped, ${x.remote} remote`;
+      `${strings.kept}: ${k.mapped} · ${k.unmapped} · ${k.remote} · ` +
+      `${strings.discarded_layer}: ${x.mapped} · ${x.unmapped} · ${x.remote}`;
   })
   .catch(e => {
-    document.getElementById('map-counts').textContent = 'Failed to load map data';
+    document.getElementById('map-counts').textContent = strings.failed;
     console.error(e);
   });
 </script>

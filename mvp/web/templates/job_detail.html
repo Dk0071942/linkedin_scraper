@@ -1,15 +1,17 @@
 {% extends "base.html" %}
-{% block title %}{{ job.job_title or "Job" }} · LinkedIn Scraper{% endblock %}
+{% block title %}{{ job.job_title or t("common.untitled") }} · {{ t("brand") }}{% endblock %}
 {% block content %}
-<a href="{{ '/discarded' if in_discarded else '/jobs' }}" class="text-sm text-slate-500 hover:text-slate-900">← Back to {{ 'discarded' if in_discarded else 'jobs' }}</a>
+<a href="{{ '/discarded' if in_discarded else '/jobs' }}" class="text-sm text-slate-500 hover:text-slate-900">
+  {{ t("detail.back_to_discarded") if in_discarded else t("detail.back_to_jobs") }}
+</a>
 
 <div class="mt-3 grid lg:grid-cols-3 gap-6">
   <section class="lg:col-span-2">
     <div class="rounded-lg border border-slate-200 bg-white p-6">
       <div class="flex items-baseline justify-between gap-4">
-        <h1 class="text-2xl font-semibold tracking-tight">{{ job.job_title or "(untitled)" }}</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">{{ job.job_title or t("common.untitled") }}</h1>
         <a href="{{ job.linkedin_url }}" target="_blank" rel="noopener"
-           class="text-sm text-blue-700 hover:underline whitespace-nowrap">Open on LinkedIn ↗</a>
+           class="text-sm text-blue-700 hover:underline whitespace-nowrap">{{ t("detail.open_linkedin") }}</a>
       </div>
       <div class="mt-1 text-slate-700">
         {% if job.company_linkedin_url %}
@@ -20,27 +22,27 @@
       <div class="mt-3 flex flex-wrap gap-2 text-xs">
         {% if job.workplace_type %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ job.workplace_type }}</span>{% endif %}
         {% if job.employment_type %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ job.employment_type }}</span>{% endif %}
-        {% if job.posted_date %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">Posted: {{ job.posted_date }}</span>{% endif %}
+        {% if job.posted_date %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ t("detail.posted_label") }} {{ job.posted_date }}</span>{% endif %}
         {% if job.applicant_count %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ job.applicant_count }}</span>{% endif %}
-        {% if in_discarded %}<span class="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5">Discarded</span>{% endif %}
+        {% if in_discarded %}<span class="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5">{{ t("detail.discarded_badge") }}</span>{% endif %}
       </div>
       <div class="mt-4 flex flex-wrap gap-2">
         {% if in_discarded %}
           <form method="post" action="/discarded/{{ job.job_id }}/restore">
             <button type="submit" class="text-sm rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5">
-              Restore to kept jobs
+              {{ t("detail.restore") }}
             </button>
           </form>
         {% else %}
           <form method="post" action="/jobs/{{ job.job_id }}/discard">
             <button type="submit" class="text-sm rounded-md bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-1.5">
-              Move to discarded
+              {{ t("detail.discard") }}
             </button>
           </form>
         {% endif %}
         <button type="button" id="copy-for-llm"
                 class="text-sm rounded-md bg-slate-900 hover:bg-slate-700 text-white px-3 py-1.5">
-          Copy for LLM
+          {{ t("detail.copy_for_llm") }}
         </button>
       </div>
     </div>
@@ -56,10 +58,18 @@
       "linkedin_url": job.linkedin_url,
       "job_description": job.job_description
     } | tojson }}</script>
+    <script id="copy-strings" type="application/json">{{ {
+      "prompt": t("detail.llm_prompt"),
+      "no_description": t("detail.no_description"),
+      "copied": t("detail.copy_for_llm.copied"),
+      "failed": t("detail.copy_for_llm.failed"),
+      "original": t("detail.copy_for_llm")
+    } | tojson }}</script>
     <script>
     (() => {
       const btn = document.getElementById('copy-for-llm');
       const j = JSON.parse(document.getElementById('job-payload').textContent);
+      const s = JSON.parse(document.getElementById('copy-strings').textContent);
       const lines = [
         `Job title: ${j.job_title || ''}`,
         `Company: ${j.company || ''}`,
@@ -71,29 +81,24 @@
         `URL: ${j.linkedin_url || ''}`,
         '',
         '--- Job description ---',
-        j.job_description || '(no description scraped)',
+        j.job_description || s.no_description,
       ];
-      const text =
-        'Please draft a tailored motivation letter for the following job. ' +
-        'Match my CV to the role, highlight relevant experience, and keep the tone professional but warm. ' +
-        'Ask me for my CV if you do not have it.\n\n' +
-        lines.join('\n');
+      const text = s.prompt + '\n\n' + lines.join('\n');
 
       btn.addEventListener('click', async () => {
-        const original = btn.textContent;
         try {
           await navigator.clipboard.writeText(text);
-          btn.textContent = 'Copied!';
+          btn.textContent = s.copied;
           btn.classList.add('bg-emerald-600');
           btn.classList.remove('bg-slate-900', 'hover:bg-slate-700');
         } catch (e) {
-          btn.textContent = 'Copy failed';
+          btn.textContent = s.failed;
           btn.classList.add('bg-rose-600');
           btn.classList.remove('bg-slate-900', 'hover:bg-slate-700');
           console.error(e);
         }
         setTimeout(() => {
-          btn.textContent = original;
+          btn.textContent = s.original;
           btn.classList.remove('bg-emerald-600', 'bg-rose-600');
           btn.classList.add('bg-slate-900', 'hover:bg-slate-700');
         }, 1500);
@@ -102,11 +107,11 @@
     </script>
 
     <div class="rounded-lg border border-slate-200 bg-white p-6 mt-6">
-      <h2 class="text-base font-semibold text-slate-900 mb-3">Job description</h2>
+      <h2 class="text-base font-semibold text-slate-900 mb-3">{{ t("detail.description") }}</h2>
       {% if job.job_description %}
         <pre class="whitespace-pre-wrap font-sans text-sm text-slate-800 leading-6">{{ job.job_description }}</pre>
       {% else %}
-        <p class="text-slate-500 italic">No description scraped.</p>
+        <p class="text-slate-500 italic">{{ t("detail.no_description") }}</p>
       {% endif %}
     </div>
   </section>

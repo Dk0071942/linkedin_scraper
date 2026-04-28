@@ -7,54 +7,54 @@
   class="rounded-lg border border-slate-200 bg-white p-6 sticky top-4"
 >
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-base font-semibold text-slate-900">Application</h2>
-    {% if saved %}<span class="text-xs text-emerald-700">Saved ✓</span>{% endif %}
+    <h2 class="text-base font-semibold text-slate-900">{{ t("app.heading") }}</h2>
+    {% if saved %}<span class="text-xs text-emerald-700">{{ t("common.saved") }}</span>{% endif %}
   </div>
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">Status</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.status") }}</label>
   <select name="status" class="w-full rounded-md border-slate-300 text-sm mb-3">
     {% for opt in ["not_applied","drafted","applied","interviewing","accepted","rejected","withdrawn"] %}
-      <option value="{{ opt }}" {% if st == opt %}selected{% endif %}>{{ opt }}</option>
+      <option value="{{ opt }}" {% if st == opt %}selected{% endif %}>{{ t("app.status." ~ opt) }}</option>
     {% endfor %}
   </select>
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">Applied at</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.applied_at") }}</label>
   <input type="date" name="applied_at" value="{{ (app.applied_at or '')[:10] }}"
          class="w-full rounded-md border-slate-300 text-sm mb-3" />
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">Rejected at</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.rejected_at") }}</label>
   <input type="date" name="rejected_at" value="{{ (app.rejected_at or '')[:10] }}"
          class="w-full rounded-md border-slate-300 text-sm mb-3" />
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">Accepted at</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.accepted_at") }}</label>
   <input type="date" name="accepted_at" value="{{ (app.accepted_at or '')[:10] }}"
          class="w-full rounded-md border-slate-300 text-sm mb-3" />
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">CV version</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.cv_version") }}</label>
   <input type="text" name="cv_version" value="{{ app.cv_version or '' }}"
-         placeholder="e.g. cv-2026-04-data.pdf"
+         placeholder="{{ t('app.field.cv_version.placeholder') }}"
          class="w-full rounded-md border-slate-300 text-sm mb-3" />
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">Motivation letter</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.motivation_letter") }}</label>
   <textarea name="motivation_letter" rows="8"
     class="w-full rounded-md border-slate-300 text-sm mb-3 font-sans"
-    placeholder="Drafted motivation letter…">{{ app.motivation_letter or "" }}</textarea>
+    placeholder="{{ t('app.field.motivation_letter.placeholder') }}">{{ app.motivation_letter or "" }}</textarea>
 
-  <label class="block text-xs font-medium text-slate-700 mb-1">Notes</label>
+  <label class="block text-xs font-medium text-slate-700 mb-1">{{ t("app.field.notes") }}</label>
   <textarea name="notes" rows="3"
     class="w-full rounded-md border-slate-300 text-sm mb-3">{{ app.notes or "" }}</textarea>
 
   <details class="mb-3 text-sm">
-    <summary class="cursor-pointer text-slate-700 hover:text-slate-900">Add history event</summary>
-    <input type="text" name="add_history_event" placeholder="e.g. submitted via easy apply"
+    <summary class="cursor-pointer text-slate-700 hover:text-slate-900">{{ t("app.add_event_summary") }}</summary>
+    <input type="text" name="add_history_event" placeholder="{{ t('app.add_event.placeholder') }}"
            class="w-full mt-2 rounded-md border-slate-300 text-sm" />
-    <input type="text" name="history_notes" placeholder="optional notes"
+    <input type="text" name="history_notes" placeholder="{{ t('app.add_event.notes_placeholder') }}"
            class="w-full mt-1 rounded-md border-slate-300 text-sm" />
   </details>
 
   {% if app.history %}
     <div class="border-t border-slate-100 pt-3 mb-3">
-      <div class="text-xs font-medium text-slate-700 mb-1">History</div>
+      <div class="text-xs font-medium text-slate-700 mb-1">{{ t("app.history") }}</div>
       <ul class="space-y-1 text-xs text-slate-600">
         {% for h in app.history %}
           <li><span class="text-slate-400">{{ h.at[:16] }}</span> · {{ h.event }}{% if h.notes %} <span class="text-slate-400">({{ h.notes }})</span>{% endif %}</li>
@@ -65,6 +65,6 @@
 
   <button type="submit"
           class="w-full rounded-md bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium py-2">
-    Save application
+    {{ t("app.save") }}
   </button>
 </form>

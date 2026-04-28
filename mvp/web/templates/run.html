@@ -1,58 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Run · LinkedIn Scraper{% endblock %}
+{% block title %}{{ t("nav.run") }} · {{ t("brand") }}{% endblock %}
 {% block content %}
 <div class="grid lg:grid-cols-3 gap-6">
 
   <section class="lg:col-span-1 space-y-4">
     <div class="rounded-lg border border-slate-200 bg-white p-6">
-      <h1 class="text-base font-semibold mb-3">Controls</h1>
+      <h1 class="text-base font-semibold mb-3">{{ t("run.controls") }}</h1>
 
       <form method="post" action="/run/start" class="mb-2">
         <button type="submit" {% if is_running %}disabled{% endif %}
           class="w-full rounded-md bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2">
-          ▶ Start scrape
+          {{ t("run.start") }}
         </button>
       </form>
 
       <form method="post" action="/run/start-rescrape" class="mb-2">
         <button type="submit" {% if is_running %}disabled{% endif %}
           class="w-full rounded-md bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2"
-          onclick="return confirm('Wipe data/ and re-scrape from scratch?')">
-          ↻ Rescrape (wipe data/)
+          onclick="return confirm({{ t('run.rescrape_confirm') | tojson }})">
+          {{ t("run.rescrape") }}
         </button>
       </form>
 
       <form method="post" action="/run/login" class="mb-2">
         <button type="submit" {% if is_running %}disabled{% endif %}
           class="w-full rounded-md bg-slate-200 hover:bg-slate-300 disabled:bg-slate-100 disabled:cursor-not-allowed text-slate-900 text-sm font-medium py-2">
-          🔑 Log in to LinkedIn
+          {{ t("run.login") }}
         </button>
       </form>
 
       <form method="post" action="/run/stop">
         <button type="submit" {% if not is_running %}disabled{% endif %}
           class="w-full rounded-md bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2">
-          ■ Stop
+          {{ t("run.stop") }}
         </button>
       </form>
     </div>
 
     <div class="rounded-lg border border-slate-200 bg-white p-6">
-      <h2 class="text-base font-semibold mb-3">Status</h2>
+      <h2 class="text-base font-semibold mb-3">{{ t("run.status.heading") }}</h2>
       <dl class="text-sm space-y-1">
-        <div class="flex justify-between"><dt class="text-slate-500">State</dt><dd id="state" class="font-medium">{{ status.state }}</dd></div>
-        <div class="flex justify-between"><dt class="text-slate-500">Started</dt><dd id="started">{{ (status.started_at or "-")[:19] }}</dd></div>
-        <div class="flex justify-between"><dt class="text-slate-500">Finished</dt><dd id="finished">{{ (status.finished_at or "-")[:19] }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">{{ t("run.status.state") }}</dt><dd id="state" class="font-medium">{{ status.state }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">{{ t("run.status.started") }}</dt><dd id="started">{{ (status.started_at or "-")[:19] }}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">{{ t("run.status.finished") }}</dt><dd id="finished">{{ (status.finished_at or "-")[:19] }}</dd></div>
       </dl>
 
       <div id="summary" class="mt-4 text-sm">
         {% if status.summary %}
           <div class="border-t border-slate-100 pt-3 space-y-1">
-            <div class="flex justify-between"><span class="text-slate-500">Searches</span><span>{{ status.summary.searches_run }}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">URLs found</span><span>{{ status.summary.urls_found }}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Scraped</span><span>{{ status.summary.scraped }}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Matched</span><span class="font-medium text-emerald-700">{{ status.summary.matched }}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Failed</span><span>{{ status.summary.failed_scrapes }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">{{ t("run.summary.searches") }}</span><span>{{ status.summary.searches_run }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">{{ t("run.summary.urls_found") }}</span><span>{{ status.summary.urls_found }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">{{ t("run.summary.scraped") }}</span><span>{{ status.summary.scraped }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">{{ t("run.summary.matched") }}</span><span class="font-medium text-emerald-700">{{ status.summary.matched }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">{{ t("run.summary.failed") }}</span><span>{{ status.summary.failed_scrapes }}</span></div>
           </div>
         {% endif %}
         {% if status.error %}
@@ -67,19 +67,23 @@
   <section class="lg:col-span-2">
     <div class="rounded-lg border border-slate-200 bg-slate-900 text-slate-100 p-4 h-[28rem] overflow-hidden flex flex-col">
       <div class="flex items-center justify-between mb-2 text-xs text-slate-400">
-        <span>Live log</span>
+        <span>{{ t("run.live_log") }}</span>
         <button type="button" onclick="document.getElementById('log').textContent=''"
-                class="hover:text-white">clear</button>
+                class="hover:text-white">{{ t("run.clear") }}</button>
       </div>
       <pre id="log" class="text-xs font-mono leading-5 overflow-y-auto flex-1 whitespace-pre-wrap"></pre>
     </div>
   </section>
 </div>
 
+<script id="run-strings" type="application/json">{{ {
+  "run_finished": t("run.run_finished")
+} | tojson }}</script>
 <script>
 (function () {
   const logEl = document.getElementById('log');
   const stateEl = document.getElementById('state');
+  const strings = JSON.parse(document.getElementById('run-strings').textContent);
   function appendLog(line) {
     const atBottom = (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 40;
     logEl.textContent += line + "\n";
@@ -92,7 +96,7 @@
     es = new EventSource('/run/logs');
     es.addEventListener('log', (e) => appendLog(e.data));
     es.addEventListener('done', () => {
-      appendLog('--- run finished ---');
+      appendLog(strings.run_finished);
       es.close();
       setTimeout(() => location.reload(), 1500);
     });

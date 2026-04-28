@@ -28,7 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 
-from . import config_io, geocode, jobs_io
+from . import config_io, geocode, i18n, jobs_io
 from .runner import DONE_SENTINEL, controller
 
 
@@ -37,15 +37,37 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app = FastAPI(title="LinkedIn Scraper MVP")
 
+LANG_COOKIE = "mvp_lang"
+
 
 # --- Helpers ---
 
-def _ctx(**extra) -> dict:
+def _lang_from(request: Request) -> str:
+    return i18n.normalize(request.cookies.get(LANG_COOKIE, i18n.DEFAULT_LANG))
+
+
+def _ctx(request: Request, **extra) -> dict:
+    lang = _lang_from(request)
     return {
         "is_running": controller.is_running,
         "run_state": controller.state,
+        "lang": lang,
+        "languages": i18n.LANGUAGES,
+        "t": lambda key, **fmt: i18n.translate(key, lang, **fmt),
         **extra,
     }
+
+
+# --- Language ---
+
+@app.post("/lang/{code}")
+async def set_language(request: Request, code: str):
+    code = i18n.normalize(code)
+    target = request.headers.get("referer") or "/jobs"
+    resp = RedirectResponse(target, status_code=303)
+    # 1 year, scoped to the host, lax mode (works on same-origin redirects)
+    resp.set_cookie(LANG_COOKIE, code, max_age=60 * 60 * 24 * 365, samesite="lax")
+    return resp
 
 
 # --- Root ---
@@ -70,7 +92,7 @@ async def jobs_page(request: Request, q: str = ""):
         jobs = [j for j in jobs if match(j)]
     return templates.TemplateResponse(
         request, "jobs.html",
-        _ctx(jobs=jobs, q=q, kind="kept",
+        _ctx(request, jobs=jobs, q=q, kind="kept",
              count_kept=len(jobs_io.list_jobs(discarded=False)),
              count_disc=len(jobs_io.list_jobs(discarded=True))),
     )
@@ -89,7 +111,7 @@ async def discarded_page(request: Request, q: str = ""):
         jobs = [j for j in jobs if match(j)]
     return templates.TemplateResponse(
         request, "jobs.html",
-        _ctx(jobs=jobs, q=q, kind="discarded",
+        _ctx(request, jobs=jobs, q=q, kind="discarded",
              count_kept=len(jobs_io.list_jobs(discarded=False)),
              count_disc=len(jobs_io.list_jobs(discarded=True))),
     )
@@ -103,7 +125,7 @@ async def job_detail(request: Request, job_id: str):
     in_discarded = not rec.get("matched", True)
     return templates.TemplateResponse(
         request, "job_detail.html",
-        _ctx(job=rec, in_discarded=in_discarded),
+        _ctx(request, job=rec, in_discarded=in_discarded),
     )
 
 
@@ -139,7 +161,7 @@ async def save_application(
     in_discarded = not rec.get("matched", True)
     return templates.TemplateResponse(
         request, "_application_card.html",
-        _ctx(job=rec, in_discarded=in_discarded, saved=True),
+        _ctx(request, job=rec, in_discarded=in_discarded, saved=True),
     )
 
 
@@ -161,7 +183,7 @@ async def restore_job(job_id: str):
 
 @app.get("/map", response_class=HTMLResponse)
 async def map_page(request: Request):
-    return templates.TemplateResponse(request, "map.html", _ctx())
+    return templates.TemplateResponse(request, "map.html", _ctx(request))
 
 
 @app.get("/map/data")
@@ -236,7 +258,7 @@ async def config_page(request: Request, saved: bool = False, error: str = ""):
     view = config_io.to_form_view(cfg)
     return templates.TemplateResponse(
         request, "config.html",
-        _ctx(view=view, saved=saved, error=error),
+        _ctx(request, view=view, saved=saved, error=error),
     )
 
 
@@ -259,7 +281,7 @@ async def save_config(request: Request):
 async def run_page(request: Request):
     return templates.TemplateResponse(
         request, "run.html",
-        _ctx(status=controller.status()),
+        _ctx(request, status=controller.status()),
     )
 
 
