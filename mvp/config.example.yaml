@@ -1,0 +1,48 @@
+# Copy to mvp/config.yaml and edit. config.yaml is gitignored.
+#
+# Two-stage funnel:
+#   1) `searches`  — broad LinkedIn-side queries to cast a wide net of URLs.
+#   2) `filters`   — per-field client-side check on the scraped record.
+
+searches:
+  - keywords: "engineer"
+    location: "Germany"
+    limit: 100
+  - keywords: "developer"
+    location: "Germany"
+    limit: 100
+  - keywords: "machine learning"
+    location: "Germany"
+    limit: 100
+
+# Per-field filter. Across fields = AND. Within a field, `include` is OR.
+# Drop a field's block (or set both lists empty) to skip checking it.
+# Drop the entire `filters:` block to keep every scraped job.
+filters:
+  job_title:
+    include: ["engineer", "developer", "scientist"]
+    exclude: ["senior", "lead", "principal", "manager"]
+
+  location:
+    include: ["germany"]
+
+  job_description:
+    include: ["python"]
+    exclude: ["only on-site in usa"]   # example; tune as needed
+
+  workplace_type:
+    in: ["Remote", "Hybrid", "On-site"]   # remove an entry to exclude that mode
+
+  employment_type:
+    in: ["Full-time"]
+
+  posted_date:
+    within_days: 14   # only keep jobs posted in the last 14 days
+
+  case_sensitive: false
+
+scrape:
+  delay_seconds: 10
+  randomize_delay: true
+  session_file: "linkedin_session.json"
+  data_dir: "data"
