@@ -115,6 +115,14 @@ _EN: dict[str, str] = {
     ),
     "config.searches.kw_placeholder": "keywords (e.g. engineer)",
     "config.searches.loc_placeholder": "location (e.g. Germany)",
+    "config.searches.col.keywords": "Keywords",
+    "config.searches.col.location": "Location",
+    "config.searches.col.limit": "Limit",
+    "config.searches.limit_help": (
+        "Max number of new job URLs to collect from this search. The scraper "
+        "paginates LinkedIn results (~25 per page) until this many unique "
+        "URLs are found or the results run out. Max: 1000."
+    ),
     "config.filters.heading": "Filters",
     "config.filters.help": (
         "One keyword per line. Across fields = AND. Within a field, "
@@ -269,6 +277,13 @@ _ZH: dict[str, str] = {
     ),
     "config.searches.kw_placeholder": "关键词 (如 engineer)",
     "config.searches.loc_placeholder": "地点 (如 Germany)",
+    "config.searches.col.keywords": "关键词",
+    "config.searches.col.location": "地点",
+    "config.searches.col.limit": "上限",
+    "config.searches.limit_help": (
+        "本次搜索最多收集的新职位 URL 数。抓取器会自动翻页 LinkedIn 搜索结果"
+        "(每页约 25 条),直到收集到这么多唯一 URL 或结果耗尽。上限:1000。"
+    ),
     "config.filters.heading": "过滤条件",
     "config.filters.help": (
         "每行一个关键词。跨字段为 AND。同一字段内,include 为 OR。"

@@ -21,6 +21,15 @@
     <p class="text-sm text-slate-600 mb-3">
       {{ t("config.searches.help") }}
     </p>
+    <div class="grid grid-cols-12 gap-2 px-1 mb-1 text-xs font-medium uppercase tracking-wider text-slate-500">
+      <div class="col-span-5">{{ t("config.searches.col.keywords") }}</div>
+      <div class="col-span-4">{{ t("config.searches.col.location") }}</div>
+      <div class="col-span-2" title="{{ t('config.searches.limit_help') }}">
+        {{ t("config.searches.col.limit") }}
+        <span class="text-slate-400 font-normal normal-case ml-0.5 cursor-help">ⓘ</span>
+      </div>
+      <div class="col-span-1"></div>
+    </div>
     <div id="searches" class="space-y-2">
       {% for s in view.searches %}
         <div class="search-row grid grid-cols-12 gap-2 items-center">
@@ -28,7 +37,8 @@
                  class="col-span-5 rounded-md border-slate-300 text-sm" required />
           <input name="search_location" value="{{ s.location }}" placeholder="{{ t('config.searches.loc_placeholder') }}"
                  class="col-span-4 rounded-md border-slate-300 text-sm" required />
-          <input name="search_limit" value="{{ s.limit }}" type="number" min="1" max="500"
+          <input name="search_limit" value="{{ s.limit }}" type="number" min="1" max="1000"
+                 title="{{ t('config.searches.limit_help') }}"
                  class="col-span-2 rounded-md border-slate-300 text-sm" />
           <button type="button" onclick="this.parentElement.remove()"
                   class="col-span-1 rounded-md text-rose-700 hover:bg-rose-50 text-sm py-1.5">×</button>
@@ -40,7 +50,8 @@
                  class="col-span-5 rounded-md border-slate-300 text-sm" required />
           <input name="search_location" placeholder="{{ t('config.searches.loc_placeholder') }}"
                  class="col-span-4 rounded-md border-slate-300 text-sm" required />
-          <input name="search_limit" value="100" type="number" min="1" max="500"
+          <input name="search_limit" value="100" type="number" min="1" max="1000"
+                 title="{{ t('config.searches.limit_help') }}"
                  class="col-span-2 rounded-md border-slate-300 text-sm" />
           <button type="button" onclick="this.parentElement.remove()"
                   class="col-span-1 rounded-md text-rose-700 hover:bg-rose-50 text-sm py-1.5">×</button>
@@ -152,7 +163,8 @@
            class="col-span-5 rounded-md border-slate-300 text-sm" required />
     <input name="search_location" placeholder="{{ t('config.searches.loc_placeholder') }}"
            class="col-span-4 rounded-md border-slate-300 text-sm" required />
-    <input name="search_limit" value="100" type="number" min="1" max="500"
+    <input name="search_limit" value="100" type="number" min="1" max="1000"
+           title="{{ t('config.searches.limit_help') }}"
            class="col-span-2 rounded-md border-slate-300 text-sm" />
     <button type="button" onclick="this.parentElement.remove()"
             class="col-span-1 rounded-md text-rose-700 hover:bg-rose-50 text-sm py-1.5">×</button>

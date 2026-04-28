@@ -5,10 +5,11 @@ import logging
 import random
 from dataclasses import dataclass
 
-from linkedin_scraper import BrowserManager, JobSearchScraper
+from linkedin_scraper import AuthenticationError, BrowserManager, RateLimitError
 
 from .extractor import RichJobScraper
 from .filters import FilterConfig, evaluate
+from .search import PaginatedJobSearch
 from .storage import JobStore
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,13 @@ async def run_pipeline(
 ) -> RunSummary:
     summary = RunSummary()
 
-    search_scraper = JobSearchScraper(browser.page)
+    # Reuse the same delay config to space out search-page fetches too —
+    # otherwise a 1000-result limit would burst LinkedIn with 40 page loads.
+    search_scraper = PaginatedJobSearch(
+        browser.page,
+        between_page_delay=delay_seconds,
+        randomize_delay=randomize_delay,
+    )
     job_scraper = RichJobScraper(browser.page)
 
     for spec in searches:
@@ -52,11 +59,20 @@ async def run_pipeline(
         )
 
         try:
+            # Snapshot known IDs per-search: jobs saved during earlier
+            # searches in this run should count as "already in store" too.
             urls = await search_scraper.search(
                 keywords=spec.keywords,
                 location=spec.location,
                 limit=spec.limit,
+                known_ids=store.all_seen_ids(),
             )
+        except (AuthenticationError, RateLimitError):
+            logger.exception(
+                "Search aborted for %r/%r due to authentication/rate-limit state",
+                spec.keywords, spec.location,
+            )
+            raise
         except Exception as e:
             logger.error("Search failed for %r/%r: %s", spec.keywords, spec.location, e)
             continue

@@ -13,6 +13,8 @@ from typing import Any, Optional
 
 import yaml
 
+from ..search import MAX_SEARCH_LIMIT
+
 
 CONFIG_PATH = Path("mvp/config.yaml")
 
@@ -25,6 +27,14 @@ def _join_lines(items: Optional[list[str]]) -> str:
     return "\n".join(items or [])
 
 
+def _parse_search_limit(value: Any) -> int:
+    try:
+        limit = int(value) if value else 25
+    except (TypeError, ValueError):
+        limit = 25
+    return max(1, min(limit, MAX_SEARCH_LIMIT))
+
+
 def load_raw() -> dict[str, Any]:
     if not CONFIG_PATH.exists():
         return {}
@@ -33,7 +43,10 @@ def load_raw() -> dict[str, Any]:
 
 def to_form_view(cfg: dict[str, Any]) -> dict[str, Any]:
     """Shape a config dict into per-field strings/bools the template renders."""
-    searches = cfg.get("searches") or []
+    searches = [
+        {**s, "limit": _parse_search_limit(s.get("limit", 25))}
+        for s in (cfg.get("searches") or [])
+    ]
     filters = cfg.get("filters") or {}
     scrape = cfg.get("scrape") or {}
 
@@ -82,10 +95,7 @@ def from_form(form: dict[str, Any]) -> dict[str, Any]:
         loc = (loc or "").strip()
         if not kw and not loc:
             continue  # skip empty rows
-        try:
-            lim_int = int(lim) if lim else 25
-        except ValueError:
-            lim_int = 25
+        lim_int = _parse_search_limit(lim)
         searches.append({"keywords": kw, "location": loc, "limit": lim_int})
 
     def text_block(prefix: str) -> dict[str, list[str]]:

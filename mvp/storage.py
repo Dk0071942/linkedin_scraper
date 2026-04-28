@@ -74,14 +74,14 @@ class JobStore:
 
     # --- Dedup ---
 
-    def _all_seen_ids(self) -> set[str]:
+    def all_seen_ids(self) -> set[str]:
         ids: set[str] = set()
         for d in (self.jobs_dir, self.discarded_dir):
             ids.update(p.stem for p in d.glob("*.json"))
         return ids
 
     def filter_unseen(self, urls: Iterable[str]) -> list[str]:
-        seen = self._all_seen_ids()
+        seen = self.all_seen_ids()
         out: list[str] = []
         for u in urls:
             jid = url_to_id(u)
