@@ -18,6 +18,24 @@ cp mvp/config.example.yaml mvp/config.yaml   # then edit your searches + filters
 
 ### Web UI (recommended)
 
+**One-click on Windows (works on a fresh machine too):** double-click
+[mvp/start.bat](start.bat). The script:
+
+1. Installs `uv` via the official Astral installer if it isn't on PATH.
+2. Runs `uv sync --extra web --extra mvp` (uv auto-downloads a managed
+   Python if no compatible one is present).
+3. Runs `uv run playwright install chromium` so the scraper has a browser.
+4. Copies `mvp/config.example.yaml` → `mvp/config.yaml` on first run.
+5. Opens the browser to <http://127.0.0.1:8765/> and launches the server.
+
+After the page loads, click **Run → Log in to LinkedIn** to create the
+session (one-time, opens a visible Chromium window for the manual login).
+
+PowerShell users: right-click [mvp/start.ps1](start.ps1) → Run with
+PowerShell (or `powershell -ExecutionPolicy Bypass -File mvp\start.ps1`).
+
+**Manual:**
+
 ```bash
 uv run python -m mvp.web                     # http://127.0.0.1:8765/
 ```
