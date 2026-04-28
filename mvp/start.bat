@@ -41,7 +41,7 @@ if errorlevel 1 (
 REM --- 3. Ensure Chromium for Playwright ---
 echo.
 echo [2/4] Ensuring Chromium is installed for Playwright...
-uv run playwright install chromium
+uv run --extra web --extra mvp playwright install chromium
 if errorlevel 1 (
   echo [warn] playwright install reported an error. Continuing.
 )
@@ -64,6 +64,6 @@ echo       Press Ctrl+C in this window to stop the server.
 echo       First time? After the page opens, go to Run and click "Log in to LinkedIn".
 echo.
 start "" http://127.0.0.1:8765/
-uv run python -m mvp.web
+uv run --extra web --extra mvp python -m mvp.web
 
 endlocal

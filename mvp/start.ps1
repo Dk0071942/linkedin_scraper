@@ -41,7 +41,7 @@ if ($LASTEXITCODE -ne 0) {
 # --- 3. Ensure Chromium for Playwright ---
 Write-Host ""
 Write-Host "[2/4] Ensuring Chromium is installed for Playwright..." -ForegroundColor Cyan
-uv run playwright install chromium
+uv run --extra web --extra mvp playwright install chromium
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[warn] playwright install reported an error. Continuing." -ForegroundColor Yellow
 }
@@ -66,4 +66,4 @@ Write-Host "      Press Ctrl+C in this window to stop the server." -ForegroundCo
 Write-Host "      First time? After the page opens, go to Run and click 'Log in to LinkedIn'." -ForegroundColor DarkGray
 Write-Host ""
 Start-Process "http://127.0.0.1:8765/"
-uv run python -m mvp.web
+uv run --extra web --extra mvp python -m mvp.web
