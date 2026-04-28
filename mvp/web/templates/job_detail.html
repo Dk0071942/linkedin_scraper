@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ job.job_title or "Job" }} · LinkedIn Scraper{% endblock %}
+{% block content %}
+<a href="{{ '/discarded' if in_discarded else '/jobs' }}" class="text-sm text-slate-500 hover:text-slate-900">← Back to {{ 'discarded' if in_discarded else 'jobs' }}</a>
+
+<div class="mt-3 grid lg:grid-cols-3 gap-6">
+  <section class="lg:col-span-2">
+    <div class="rounded-lg border border-slate-200 bg-white p-6">
+      <div class="flex items-baseline justify-between gap-4">
+        <h1 class="text-2xl font-semibold tracking-tight">{{ job.job_title or "(untitled)" }}</h1>
+        <a href="{{ job.linkedin_url }}" target="_blank" rel="noopener"
+           class="text-sm text-blue-700 hover:underline whitespace-nowrap">Open on LinkedIn ↗</a>
+      </div>
+      <div class="mt-1 text-slate-700">
+        {% if job.company_linkedin_url %}
+          <a href="{{ job.company_linkedin_url }}" target="_blank" rel="noopener" class="hover:underline">{{ job.company }}</a>
+        {% else %}{{ job.company }}{% endif %}
+        {% if job.location %} · {{ job.location }}{% endif %}
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2 text-xs">
+        {% if job.workplace_type %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ job.workplace_type }}</span>{% endif %}
+        {% if job.employment_type %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ job.employment_type }}</span>{% endif %}
+        {% if job.posted_date %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">Posted: {{ job.posted_date }}</span>{% endif %}
+        {% if job.applicant_count %}<span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ job.applicant_count }}</span>{% endif %}
+        {% if in_discarded %}<span class="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5">Discarded</span>{% endif %}
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        {% if in_discarded %}
+          <form method="post" action="/discarded/{{ job.job_id }}/restore">
+            <button type="submit" class="text-sm rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5">
+              Restore to kept jobs
+            </button>
+          </form>
+        {% else %}
+          <form method="post" action="/jobs/{{ job.job_id }}/discard">
+            <button type="submit" class="text-sm rounded-md bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-1.5">
+              Move to discarded
+            </button>
+          </form>
+        {% endif %}
+        <button type="button" id="copy-for-llm"
+                class="text-sm rounded-md bg-slate-900 hover:bg-slate-700 text-white px-3 py-1.5">
+          Copy for LLM
+        </button>
+      </div>
+    </div>
+
+    <script id="job-payload" type="application/json">{{ {
+      "job_title": job.job_title,
+      "company": job.company,
+      "location": job.location,
+      "workplace_type": job.workplace_type,
+      "employment_type": job.employment_type,
+      "posted_date": job.posted_date,
+      "applicant_count": job.applicant_count,
+      "linkedin_url": job.linkedin_url,
+      "job_description": job.job_description
+    } | tojson }}</script>
+    <script>
+    (() => {
+      const btn = document.getElementById('copy-for-llm');
+      const j = JSON.parse(document.getElementById('job-payload').textContent);
+      const lines = [
+        `Job title: ${j.job_title || ''}`,
+        `Company: ${j.company || ''}`,
+        `Location: ${j.location || ''}`,
+        `Workplace: ${j.workplace_type || ''}`,
+        `Employment: ${j.employment_type || ''}`,
+        `Posted: ${j.posted_date || ''}`,
+        `Applicants: ${j.applicant_count || ''}`,
+        `URL: ${j.linkedin_url || ''}`,
+        '',
+        '--- Job description ---',
+        j.job_description || '(no description scraped)',
+      ];
+      const text =
+        'Please draft a tailored motivation letter for the following job. ' +
+        'Match my CV to the role, highlight relevant experience, and keep the tone professional but warm. ' +
+        'Ask me for my CV if you do not have it.\n\n' +
+        lines.join('\n');
+
+      btn.addEventListener('click', async () => {
+        const original = btn.textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          btn.textContent = 'Copied!';
+          btn.classList.add('bg-emerald-600');
+          btn.classList.remove('bg-slate-900', 'hover:bg-slate-700');
+        } catch (e) {
+          btn.textContent = 'Copy failed';
+          btn.classList.add('bg-rose-600');
+          btn.classList.remove('bg-slate-900', 'hover:bg-slate-700');
+          console.error(e);
+        }
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('bg-emerald-600', 'bg-rose-600');
+          btn.classList.add('bg-slate-900', 'hover:bg-slate-700');
+        }, 1500);
+      });
+    })();
+    </script>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-6 mt-6">
+      <h2 class="text-base font-semibold text-slate-900 mb-3">Job description</h2>
+      {% if job.job_description %}
+        <pre class="whitespace-pre-wrap font-sans text-sm text-slate-800 leading-6">{{ job.job_description }}</pre>
+      {% else %}
+        <p class="text-slate-500 italic">No description scraped.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <aside id="application-card">
+    {% include "_application_card.html" %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Config · LinkedIn Scraper{% endblock %}
+{% block content %}
+<div class="flex items-baseline justify-between mb-4">
+  <h1 class="text-2xl font-semibold tracking-tight">Config</h1>
+  {% if saved %}<span class="text-sm text-emerald-700">Saved ✓</span>{% endif %}
+  {% if error %}<span class="text-sm text-rose-700">Error: {{ error }}</span>{% endif %}
+</div>
+
+<form method="post" action="/config" class="space-y-8">
+
+  <!-- Searches -->
+  <section class="rounded-lg border border-slate-200 bg-white p-6">
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="text-base font-semibold">Searches</h2>
+      <button type="button" onclick="addSearchRow()"
+              class="text-sm rounded-md bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5">
+        + Add search
+      </button>
+    </div>
+    <p class="text-sm text-slate-600 mb-3">
+      Each row is a LinkedIn-side search query. Use multiple broad rows to maximize recall;
+      the per-field filter below narrows results.
+    </p>
+    <div id="searches" class="space-y-2">
+      {% for s in view.searches %}
+        <div class="search-row grid grid-cols-12 gap-2 items-center">
+          <input name="search_keywords" value="{{ s.keywords }}" placeholder="keywords (e.g. engineer)"
+                 class="col-span-5 rounded-md border-slate-300 text-sm" required />
+          <input name="search_location" value="{{ s.location }}" placeholder="location (e.g. Germany)"
+                 class="col-span-4 rounded-md border-slate-300 text-sm" required />
+          <input name="search_limit" value="{{ s.limit }}" type="number" min="1" max="500"
+                 class="col-span-2 rounded-md border-slate-300 text-sm" />
+          <button type="button" onclick="this.parentElement.remove()"
+                  class="col-span-1 rounded-md text-rose-700 hover:bg-rose-50 text-sm py-1.5">×</button>
+        </div>
+      {% endfor %}
+      {% if not view.searches %}
+        <div class="search-row grid grid-cols-12 gap-2 items-center">
+          <input name="search_keywords" placeholder="keywords (e.g. engineer)"
+                 class="col-span-5 rounded-md border-slate-300 text-sm" required />
+          <input name="search_location" placeholder="location (e.g. Germany)"
+                 class="col-span-4 rounded-md border-slate-300 text-sm" required />
+          <input name="search_limit" value="100" type="number" min="1" max="500"
+                 class="col-span-2 rounded-md border-slate-300 text-sm" />
+          <button type="button" onclick="this.parentElement.remove()"
+                  class="col-span-1 rounded-md text-rose-700 hover:bg-rose-50 text-sm py-1.5">×</button>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section class="rounded-lg border border-slate-200 bg-white p-6 space-y-6">
+    <div>
+      <h2 class="text-base font-semibold">Filters</h2>
+      <p class="text-sm text-slate-600 mt-1">
+        One keyword per line. Across fields = AND. Within a field, <em>include</em> is OR.
+        Leave a textarea empty to skip that field.
+      </p>
+    </div>
+
+    {% macro text_block(label, key, view) %}
+      <fieldset class="grid sm:grid-cols-2 gap-3">
+        <legend class="text-sm font-medium text-slate-800 mb-1">{{ label }}</legend>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Include (any match)</label>
+          <textarea name="filter_{{ key }}_include" rows="3"
+            class="w-full rounded-md border-slate-300 text-sm font-mono">{{ view.filters[key].include }}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Exclude (none may match)</label>
+          <textarea name="filter_{{ key }}_exclude" rows="3"
+            class="w-full rounded-md border-slate-300 text-sm font-mono">{{ view.filters[key].exclude }}</textarea>
+        </div>
+      </fieldset>
+    {% endmacro %}
+
+    {{ text_block("Job title", "job_title", view) }}
+    {{ text_block("Location", "location", view) }}
+    {{ text_block("Job description", "job_description", view) }}
+
+    <div class="grid sm:grid-cols-2 gap-3">
+      <fieldset>
+        <legend class="text-sm font-medium text-slate-800 mb-1">Workplace type (must be one of)</legend>
+        <textarea name="filter_workplace_type_in" rows="3"
+          placeholder="Remote&#10;Hybrid&#10;On-site"
+          class="w-full rounded-md border-slate-300 text-sm font-mono">{{ view.filters.workplace_type_in }}</textarea>
+      </fieldset>
+      <fieldset>
+        <legend class="text-sm font-medium text-slate-800 mb-1">Employment type (must be one of)</legend>
+        <textarea name="filter_employment_type_in" rows="3"
+          placeholder="Full-time&#10;Contract"
+          class="w-full rounded-md border-slate-300 text-sm font-mono">{{ view.filters.employment_type_in }}</textarea>
+      </fieldset>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-3 items-end">
+      <fieldset>
+        <legend class="text-sm font-medium text-slate-800 mb-1">Posted within (days)</legend>
+        <input type="number" name="filter_posted_within_days" min="0" step="0.5"
+               value="{{ view.filters.posted_within_days }}"
+               placeholder="leave empty to skip date filter"
+               class="w-full rounded-md border-slate-300 text-sm" />
+      </fieldset>
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" name="filter_case_sensitive" {% if view.filters.case_sensitive %}checked{% endif %}
+               class="rounded border-slate-300" />
+        Case-sensitive matching
+      </label>
+    </div>
+  </section>
+
+  <!-- Scrape settings -->
+  <section class="rounded-lg border border-slate-200 bg-white p-6 grid sm:grid-cols-2 gap-4">
+    <h2 class="sm:col-span-2 text-base font-semibold">Scrape settings</h2>
+
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Delay between job pages (seconds)</label>
+      <input type="number" name="scrape_delay_seconds" min="1" step="0.5"
+             value="{{ view.scrape.delay_seconds }}"
+             class="w-full rounded-md border-slate-300 text-sm" />
+    </div>
+    <label class="inline-flex items-end gap-2 text-sm pb-2">
+      <input type="checkbox" name="scrape_randomize_delay" {% if view.scrape.randomize_delay %}checked{% endif %}
+             class="rounded border-slate-300" />
+      Randomize 100%–300% of base delay
+    </label>
+
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Session file</label>
+      <input type="text" name="scrape_session_file" value="{{ view.scrape.session_file }}"
+             class="w-full rounded-md border-slate-300 text-sm" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Data directory</label>
+      <input type="text" name="scrape_data_dir" value="{{ view.scrape.data_dir }}"
+             class="w-full rounded-md border-slate-300 text-sm" />
+    </div>
+  </section>
+
+  <div class="flex items-center gap-3">
+    <button type="submit"
+            class="rounded-md bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium px-4 py-2">
+      Save config
+    </button>
+    <span class="text-xs text-slate-500">A backup is written to <code>mvp/config.yaml.bak</code> on every save.</span>
+  </div>
+</form>
+
+<template id="search-row-template">
+  <div class="search-row grid grid-cols-12 gap-2 items-center">
+    <input name="search_keywords" placeholder="keywords (e.g. engineer)"
+           class="col-span-5 rounded-md border-slate-300 text-sm" required />
+    <input name="search_location" placeholder="location (e.g. Germany)"
+           class="col-span-4 rounded-md border-slate-300 text-sm" required />
+    <input name="search_limit" value="100" type="number" min="1" max="500"
+           class="col-span-2 rounded-md border-slate-300 text-sm" />
+    <button type="button" onclick="this.parentElement.remove()"
+            class="col-span-1 rounded-md text-rose-700 hover:bg-rose-50 text-sm py-1.5">×</button>
+  </div>
+</template>
+
+<script>
+function addSearchRow() {
+  const tpl = document.getElementById("search-row-template");
+  const node = tpl.content.cloneNode(true);
+  document.getElementById("searches").appendChild(node);
+}
+</script>
+{% endblock %}

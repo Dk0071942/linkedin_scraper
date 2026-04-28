@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ "Discarded" if kind == "discarded" else "Jobs" }} · LinkedIn Scraper{% endblock %}
+{% block content %}
+<div class="flex items-baseline justify-between mb-4">
+  <h1 class="text-2xl font-semibold tracking-tight">
+    {% if kind == "discarded" %}Discarded jobs{% else %}Kept jobs{% endif %}
+  </h1>
+  <div class="text-sm text-slate-500">
+    {{ count_kept }} kept · {{ count_disc }} discarded
+  </div>
+</div>
+
+<form method="get" class="mb-4">
+  <input
+    type="search" name="q" value="{{ q }}"
+    placeholder="Filter by title, company, or location…"
+    class="w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500"
+  />
+</form>
+
+{% if not jobs %}
+  <div class="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+    {% if q %}
+      No jobs match <code>{{ q }}</code>.
+    {% else %}
+      No {{ "discarded" if kind == "discarded" else "kept" }} jobs yet.
+      Configure your <a href="/config" class="text-slate-900 underline">searches</a>
+      and start a <a href="/run" class="text-slate-900 underline">run</a>.
+    {% endif %}
+  </div>
+{% else %}
+  <div class="rounded-lg border border-slate-200 bg-white overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
+        <tr>
+          <th class="text-left font-medium px-3 py-2">Title</th>
+          <th class="text-left font-medium px-3 py-2">Company</th>
+          <th class="text-left font-medium px-3 py-2">Location</th>
+          <th class="text-left font-medium px-3 py-2">Workplace</th>
+          <th class="text-left font-medium px-3 py-2">Posted</th>
+          {% if kind != "discarded" %}<th class="text-left font-medium px-3 py-2">Status</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for j in jobs %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-3 py-2">
+            <a href="/jobs/{{ j.job_id }}" class="font-medium text-slate-900 hover:underline">
+              {{ j.job_title or "(untitled)" }}
+            </a>
+          </td>
+          <td class="px-3 py-2 text-slate-700">{{ j.company or "-" }}</td>
+          <td class="px-3 py-2 text-slate-700">{{ j.location or "-" }}</td>
+          <td class="px-3 py-2">
+            {% if j.workplace_type %}
+              <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium
+                {% if j.workplace_type == 'Remote' %}bg-emerald-100 text-emerald-800
+                {% elif j.workplace_type == 'Hybrid' %}bg-amber-100 text-amber-800
+                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                {{ j.workplace_type }}
+              </span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-slate-600 whitespace-nowrap">
+            {% if j.posted_days_ago is not none %}
+              {{ "%.0f"|format(j.posted_days_ago) }}d ago
+            {% else %}
+              {{ j.posted_date or "-" }}
+            {% endif %}
+          </td>
+          {% if kind != "discarded" %}
+          <td class="px-3 py-2">
+            {% set st = (j.application or {}).get("status") or "not_applied" %}
+            <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium
+              {% if st == 'applied' %}bg-blue-100 text-blue-800
+              {% elif st == 'drafted' %}bg-purple-100 text-purple-800
+              {% elif st == 'interviewing' %}bg-indigo-100 text-indigo-800
+              {% elif st == 'accepted' %}bg-emerald-100 text-emerald-800
+              {% elif st == 'rejected' %}bg-rose-100 text-rose-800
+              {% elif st == 'withdrawn' %}bg-slate-100 text-slate-600
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ st }}
+            </span>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

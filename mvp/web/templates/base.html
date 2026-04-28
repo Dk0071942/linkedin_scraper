@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}LinkedIn Scraper{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .badge { @apply inline-block rounded-full px-2 py-0.5 text-xs font-medium; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen">
+  <header class="border-b border-slate-200 bg-white">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-6">
+      <a href="/jobs" class="font-semibold tracking-tight text-slate-900">LinkedIn Scraper</a>
+      <nav class="flex items-center gap-1 text-sm">
+        {% set active_class = "px-3 py-1.5 rounded-md bg-slate-900 text-white" %}
+        {% set idle_class = "px-3 py-1.5 rounded-md text-slate-700 hover:bg-slate-100" %}
+        <a href="/jobs"      class="{{ active_class if request.url.path.startswith('/jobs') and not request.url.path.startswith('/jobs/') else idle_class }}">Jobs</a>
+        <a href="/discarded" class="{{ active_class if request.url.path.startswith('/discarded') else idle_class }}">Discarded</a>
+        <a href="/map"       class="{{ active_class if request.url.path.startswith('/map') else idle_class }}">Map</a>
+        <a href="/config"    class="{{ active_class if request.url.path.startswith('/config') else idle_class }}">Config</a>
+        <a href="/run"       class="{{ active_class if request.url.path.startswith('/run') else idle_class }}">Run</a>
+      </nav>
+      <div class="ml-auto text-xs">
+        {% if is_running %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-1">
+            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            {{ run_state }}
+          </span>
+        {% else %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-2.5 py-1">
+            <span class="h-2 w-2 rounded-full bg-slate-400"></span>
+            idle
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="text-center text-xs text-slate-400 py-6">
+    mvp · run via <code>uv run python -m mvp.web</code>
+  </footer>
+</body>
+</html>
