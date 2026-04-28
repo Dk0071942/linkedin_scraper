@@ -29,6 +29,19 @@ basic_requirements = [
     'aiofiles>=23.0.0',
 ]
 
+mvp_requirements = [
+    'pyyaml>=6.0',
+]
+
+web_requirements = [
+    *mvp_requirements,
+    'fastapi>=0.115.0',
+    'uvicorn[standard]>=0.30.0',
+    'jinja2>=3.1.0',
+    'python-multipart>=0.0.9',
+    'sse-starlette>=2.1.0',
+]
+
 setup(
     name='linkedin_scraper',
     packages=find_packages(exclude=['tests', 'tests.*', 'samples', 'samples.*']),
@@ -58,6 +71,14 @@ setup(
         'Operating System :: OS Independent',
     ],
     install_requires=basic_requirements,
+    extras_require={
+        'mvp': mvp_requirements,
+        'web': web_requirements,
+    },
+    package_data={
+        'mvp': ['config.example.yaml', 'README.md'],
+        'mvp.web.templates': ['*.html'],
+    },
     include_package_data=True,
     project_urls={
         'Bug Reports': 'https://github.com/joeyism/linkedin_scraper/issues',

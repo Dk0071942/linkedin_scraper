@@ -42,9 +42,21 @@ dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
+    "pyyaml>=6.0",
     "build>=1.0.0",
     "twine>=4.0.0",
     "wheel>=0.40.0",
+]
+mvp = [
+    "pyyaml>=6.0",
+]
+web = [
+    "pyyaml>=6.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+    "sse-starlette>=2.1.0",
 ]
 
 [project.urls]
@@ -54,7 +66,19 @@ Repository = "https://github.com/joeyism/linkedin_scraper"
 Issues = "https://github.com/joeyism/linkedin_scraper/issues"
 
 [tool.setuptools]
-packages = ["linkedin_scraper", "linkedin_scraper.core", "linkedin_scraper.models", "linkedin_scraper.scrapers"]
+packages = [
+    "linkedin_scraper",
+    "linkedin_scraper.core",
+    "linkedin_scraper.models",
+    "linkedin_scraper.scrapers",
+    "mvp",
+    "mvp.web",
+    "mvp.web.templates",
+]
+
+[tool.setuptools.package-data]
+"mvp" = ["config.example.yaml", "README.md"]
+"mvp.web.templates" = ["*.html"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

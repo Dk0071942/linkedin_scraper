@@ -20,6 +20,10 @@ include pytest.ini
 
 # Include all Python files in the package
 recursive-include linkedin_scraper *.py
+recursive-include mvp *.py
+include mvp/README.md
+include mvp/config.example.yaml
+recursive-include mvp/web/templates *.html
 
 # Exclude build, test, and cache files
 global-exclude __pycache__

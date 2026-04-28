@@ -35,6 +35,12 @@ debug_*.py
 # Session files (sensitive cookies)
 linkedin_session.json
 
+# MVP user data
+mvp/config.yaml
+mvp/config.yaml.bak
+mvp/*.tmp
+data/
+
 # Build artifacts
 MANIFEST
 MANIFEST.ini
